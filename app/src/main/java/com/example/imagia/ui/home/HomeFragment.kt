@@ -76,7 +76,9 @@ class HomeFragment : Fragment() {
 
         tts = TextToSpeech(requireContext()) { status ->
             if (status != TextToSpeech.ERROR){
-                tts.setLanguage(Locale.UK)
+                val locale = Locale("ES", "ES")
+
+                tts.setLanguage(locale)
             }
             else {
                 Toast.makeText(requireContext(), "Error en TTS", Toast.LENGTH_LONG)
@@ -164,9 +166,10 @@ class HomeFragment : Fragment() {
                 val responseCode = connection.responseCode
                 if (responseCode == HttpURLConnection.HTTP_OK) {
                     val response = connection.inputStream.bufferedReader().use { it.readText() }
-
-                    speakText()
-                    Log.d("Petición", "Respuesta recibida: $response")
+                    val jsonResponse = JSONObject(response)
+                    val description = jsonResponse.optJSONObject("data").optString("response")
+                    speakText(description)
+                    Log.d("Petición", "Respuesta recibida: $description")
                 } else {
                     Log.d("Petición", "Error en la petición: Código $responseCode")
                 }
