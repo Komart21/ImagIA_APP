@@ -1,15 +1,17 @@
 package com.example.imagia.ui.home
 
+import java.io.BufferedReader
+import java.io.DataOutputStream
+import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
 import android.speech.tts.TextToSpeech
 import android.util.Base64
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.RequestBody.Companion.toRequestBody
-import java.io.IOException
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import android.Manifest
 import android.content.ContentValues
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -33,6 +35,7 @@ import okhttp3.Callback
 import okhttp3.Response
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.ExecutorService
@@ -71,12 +74,27 @@ class HomeFragment : Fragment() {
     ): View {
         ViewModelProvider(this).get(HomeViewModel::class.java)
 
+        tts = TextToSpeech(requireContext()) { status ->
+            if (status != TextToSpeech.ERROR){
+                tts.setLanguage(Locale.UK)
+            }
+            else {
+                Toast.makeText(requireContext(), "Error en TTS", Toast.LENGTH_LONG)
+            }
+        }
+
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         return binding.root
-
-
     }
 
+
+    private fun speakText(text: String) {
+        if (::tts.isInitialized) {
+            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
+        } else {
+            Toast.makeText(requireContext(), "TTS no está inicializado", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     private fun initializeCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
@@ -110,56 +128,54 @@ class HomeFragment : Fragment() {
         }, ContextCompat.getMainExecutor(requireContext()))
     }
 
-    private fun sendPhotoToServer(filePath: Uri?){
-        val client = OkHttpClient()
+    private fun sendPhotoToServer(filePath: Uri?) {
+        speakText("Enviando Imagen")
 
-        val inputStream = requireContext().contentResolver.openInputStream(filePath!!)
-        val fileBytes = inputStream?.readBytes() ?: ByteArray(0)
-        inputStream?.close()
+        val executor = Executors.newSingleThreadExecutor()
+        executor.execute {
+            try {
+                val inputStream = requireContext().contentResolver.openInputStream(filePath!!)
+                val bitmap = BitmapFactory.decodeStream(inputStream)
+                inputStream?.close()
 
-        val base64String = Base64.encodeToString(fileBytes, Base64.NO_WRAP)
+                // Redimensionar la imagen
+                val resizedBitmap = Bitmap.createScaledBitmap(bitmap, 500, 500, true)
+                val outputStream = ByteArrayOutputStream()
+                resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
+                val fileBytes = outputStream.toByteArray()
 
-        val jsonObject = JSONObject().apply {
-            put("prompt", "Describe esta imagen en español por favor")
-            put("stream", false)
-            put("model", "llama3.2-vision")
+                val base64String = Base64.encodeToString(fileBytes, Base64.NO_WRAP)
 
-            val jsonArray = JSONArray().apply {
-                put(base64String)
-            }
-            put("images", jsonArray)
-        }
-
-        val mediaType = "application/json; charset=UTF-8".toMediaTypeOrNull()
-        val requestBody = jsonObject.toString().toRequestBody(mediaType)
-
-        // 4) Construir la request OkHttp
-        val request = Request.Builder()
-            .url("https://imagia3.ieti.site/api/analitzar-imatge")
-            .post(requestBody)
-            .build()
-
-
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                // Error de red, no hubo respuesta exitosa
-                println("Error al subir la imagen: ${e.message}")
-                // Si estás en Android, aquí puedes usar runOnUiThread o LiveData/Flow para notificar al UI
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                // Respuesta exitosa o con error del servidor
-                response.use {
-                    if (!response.isSuccessful) {
-                        
-                    } else {
-
-                        println("Imagen subida con éxito: ${response.code}")
-                    }
+                val jsonObject = JSONObject().apply {
+                    put("prompt", "Describe brevemente esta imagen en español por favor")
+                    put("stream", false)
+                    put("model", "llama3.2-vision")
+                    put("images", JSONArray().apply { put(base64String) })
                 }
+
+                val url = URL("https://imagia3.ieti.site/api/analitzar-imatge")
+                val connection = url.openConnection() as HttpURLConnection
+                connection.requestMethod = "POST"
+                connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                connection.doOutput = true
+
+                DataOutputStream(connection.outputStream).use { it.writeBytes(jsonObject.toString()) }
+
+                val responseCode = connection.responseCode
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    val response = connection.inputStream.bufferedReader().use { it.readText() }
+
+                    speakText()
+                    Log.d("Petición", "Respuesta recibida: $response")
+                } else {
+                    Log.d("Petición", "Error en la petición: Código $responseCode")
+                }
+            } catch (e: Exception) {
+                Log.e("Petición", "Error al enviar la imagen", e)
             }
-        })
+        }
     }
+
 
 
     private fun takePhoto() {
