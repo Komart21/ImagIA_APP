@@ -327,25 +327,22 @@ class HomeFragment : Fragment(), SensorEventListener {
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
-        val zAxy = event?.values?.get(2)
-        if (zAxy != null) {
-            // Solo permitir la lógica de golpes si NO estamos esperando la respuesta del servidor
+        val thudValue = event?.values?.get(2)
+        if (thudValue != null) {
             if (!isWaitingForServer) {
-                if (zAxy >= 2 && zAxy < 10) {
+                if (thudValue >= 3 && thudValue < 10) {
                     val tiempo = System.currentTimeMillis()
                     contGolpes += 1
 
-                    // Si el segundo golpe llega antes de 'tiempoEspera' y ya hay 2 golpes:
                     if ((tiempo - lastTime) < tiempoEspera && contGolpes == 2) {
                         Log.i(TAG, "Doble golpe detectado. ¡Tomando foto!")
                         takePhoto()
                         contGolpes = 0
                         lastTime = 0
                     } else {
-                        // Actualizamos el tiempo del último golpe
                         lastTime = tiempo
                     }
-                    Log.i(TAG, "Valor Z: $zAxy - contGolpes: $contGolpes")
+                    Log.i(TAG, "Valor Z: $thudValue - contGolpes: $contGolpes")
                 }
             }
         }
