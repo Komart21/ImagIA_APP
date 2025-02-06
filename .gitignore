@@ -69,7 +69,7 @@ lint/results/
 out/
 
 # Unit test results
-*.xml
+
 
 # Mac OS
 .DS_Store
