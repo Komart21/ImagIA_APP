@@ -1,11 +1,13 @@
-package com.example.imagia.login
+package com.example.imagia.authentication.login
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.example.imagia.authentication.validation.ValidationActivity
 import com.example.imagia.databinding.ActivityLoginBinding
 import org.json.JSONObject
 import java.io.DataOutputStream
@@ -76,13 +78,16 @@ class LoginActivity : AppCompatActivity() {
                 if (responseCode == HttpURLConnection.HTTP_OK) {
                     val response = connection.inputStream.bufferedReader().use { it.readText() }
                     Log.d("Petición", "Respuesta recibida: $response")
-                    // Aquí podrías parsear la respuesta, guardar token, etc.
 
                     // En caso de éxito, podrías ir a otra pantalla, ejemplo:
-                    // runOnUiThread {
-                    //     startActivity(Intent(this, NextActivity::class.java))
-                    //     finish()
-                    // }
+                    runOnUiThread {
+                        intent = Intent(this, ValidationActivity::class.java)
+                        intent.putExtra("nickname", nickname)
+                        intent.putExtra("email", email)
+                        intent.putExtra("phone", phone)
+                        startActivity(intent)
+                        finish()
+                    }
 
                 } else {
                     Log.d("Petición", "Error en la petición: Código $responseCode")
