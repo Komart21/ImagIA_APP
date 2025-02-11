@@ -254,7 +254,7 @@ class HomeFragment : Fragment(), SensorEventListener {
 
 
                 val jsonObject = JSONObject().apply {
-                    put("prompt", "Describe brevemente esta imagen en español por favor")
+                    put("prompt", "Describe en una frase esta imagen en español por favor")
                     put("stream", false)
                     put("model", "llama3.2-vision")
                     put("images", JSONArray().apply { put(base64String) })
@@ -276,7 +276,6 @@ class HomeFragment : Fragment(), SensorEventListener {
                     val jsonResponse = JSONObject(response)
                     val description = jsonResponse.optJSONObject("data")?.optString("response") ?: ""
 
-                    // Hablamos la descripción
                     requireActivity().runOnUiThread {
                         speakText(description)
                     }
@@ -287,7 +286,6 @@ class HomeFragment : Fragment(), SensorEventListener {
             } catch (e: Exception) {
                 Log.e("Petición", "Error al enviar la imagen", e)
             } finally {
-                // Al terminar, reactivamos la posibilidad de tomar foto
                 requireActivity().runOnUiThread {
                     binding.captureButton.isEnabled = true
                     isWaitingForServer = false
