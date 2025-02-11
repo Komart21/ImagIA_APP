@@ -7,6 +7,7 @@ import android.speech.tts.TextToSpeech
 import android.util.Base64
 import android.Manifest
 import android.content.ContentValues
+import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -46,6 +47,7 @@ class HomeFragment : Fragment(), SensorEventListener {
     lateinit var tts: TextToSpeech
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
+
 
     private var imageCapture: ImageCapture? = null
     private lateinit var cameraExecutor: ExecutorService
@@ -93,6 +95,8 @@ class HomeFragment : Fragment(), SensorEventListener {
                 Toast.makeText(requireContext(), "Error en TTS", Toast.LENGTH_LONG).show()
             }
         }
+
+
 
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         return binding.root
@@ -246,17 +250,22 @@ class HomeFragment : Fragment(), SensorEventListener {
 
                 val base64String = Base64.encodeToString(fileBytes, Base64.NO_WRAP)
 
+                val sharedPreference =  requireContext().getSharedPreferences("USER_DATA",Context.MODE_PRIVATE)
+
+
                 val jsonObject = JSONObject().apply {
                     put("prompt", "Describe brevemente esta imagen en español por favor")
                     put("stream", false)
                     put("model", "llama3.2-vision")
                     put("images", JSONArray().apply { put(base64String) })
+                    put("nickname", sharedPreference.getString("nickname", "App"))
                 }
 
                 val url = URL("https://imagia3.ieti.site/api/analitzar-imatge")
                 val connection = url.openConnection() as HttpURLConnection
                 connection.requestMethod = "POST"
                 connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                connection.setRequestProperty("Authorization", "Bearer ${sharedPreference.getString("apiToken", "default")}")
                 connection.doOutput = true
 
                 DataOutputStream(connection.outputStream).use { it.writeBytes(jsonObject.toString()) }

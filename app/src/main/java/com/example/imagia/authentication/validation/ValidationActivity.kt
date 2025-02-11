@@ -83,11 +83,11 @@ class ValidationActivity: AppCompatActivity()  {
                     val response = connection.inputStream.bufferedReader().use { it.readText() }
                     Log.d("Petición", "Respuesta recibida: $response")
                     apiToken = JSONObject(response).get("apiToken").toString()
-//                    val sharedPreference =  getSharedPreferences("USER_DATA",Context.MODE_PRIVATE)
-//                    var editor = sharedPreference.edit()
-//                    editor.putString("nickname",nickname)
-//                    editor.putString("apiToken", apiToken)
-//                    editor.apply()
+                    val sharedPreference =  getSharedPreferences("USER_DATA",Context.MODE_PRIVATE)
+                    var editor = sharedPreference.edit()
+                    editor.putString("nickname",nickname)
+                    editor.putString("apiToken", apiToken)
+                    editor.apply()
                     runOnUiThread {
                         intent = Intent(this, MainActivity::class.java)
                         startActivity(intent)

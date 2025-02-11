@@ -6,12 +6,12 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.inputmethod.InputMethodManager
-import android.widget.Toast
+import android.widget.TextView
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import com.example.imagia.databinding.FragmentNotificationsBinding
 import org.json.JSONObject
-import java.io.DataOutputStream
+import java.lang.Exception
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.Executors
@@ -21,67 +21,106 @@ class NotificationsFragment : Fragment() {
     private var _binding: FragmentNotificationsBinding? = null
     private val binding get() = _binding!!
 
+
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        val notificationsViewModel =
+            ViewModelProvider(this).get(NotificationsViewModel::class.java)
+
         _binding = FragmentNotificationsBinding.inflate(inflater, container, false)
-        val view = binding.root
+        val root: View = binding.root
 
-        binding.buttonLogin.setOnClickListener {
-            val nickname = binding.editNickname.text.toString().trim()
-            val email = binding.editEmail.text.toString().trim()
-            val phone = binding.editPhone.text.toString().trim()
+        // Referencias a los TextView
+        val textView: TextView = binding.textDashboard
+        val userNameTextView: TextView = binding.textUserName
 
-            if (nickname.isNotEmpty() && email.isNotEmpty() && phone.isNotEmpty()) {
-                hideKeyboard()
-                sendLoginData(nickname, email, phone)
-            } else {
-                Toast.makeText(requireContext(), "All fields are required", Toast.LENGTH_SHORT).show()
-            }
+        // Observa la ViewModel, si la usas para algo adicional
+        notificationsViewModel.text.observe(viewLifecycleOwner) {
+            textView.text = it
         }
 
-        return view
+        // Obtén el nickname de SharedPreferences
+        val sharedPreferences =
+            requireContext().getSharedPreferences("USER_DATA", Context.MODE_PRIVATE)
+        val nickname = sharedPreferences.getString("nickname", "Usuario")
+
+        // Muestra el nickname en textUserName
+        userNameTextView.text = "Usuario: " + nickname
+
+        // Realiza la petición GET para obtener la cuota
+        realizarPeticionGet(nickname)
+
+        return root
+    }
+
+    private fun realizarPeticionGet(nickname: String?) {
+        // Ejecuta la petición en un único hilo de fondo para no bloquear la UI
+        val executor = Executors.newSingleThreadExecutor()
+        executor.execute {
+            try {
+                val sharedPreferences =
+                    requireContext().getSharedPreferences("USER_DATA", Context.MODE_PRIVATE)
+
+                // Construye la URL con el parámetro 'usuario'
+                val url = URL(
+                    "https://imagia3.ieti.site/api/usuaris/quota?usuario=${
+                        nickname ?: "default"
+                    }"
+                )
+                val connection = url.openConnection() as HttpURLConnection
+
+                // Configura la petición GET
+                connection.requestMethod = "GET"
+                connection.setRequestProperty(
+                    "Authorization",
+                    "Bearer ${sharedPreferences.getString("apiToken", "default")}"
+                )
+
+                // Conectamos
+                connection.connect()
+
+                // Obtenemos el código de respuesta
+                val responseCode = connection.responseCode
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    // Leemos la respuesta
+                    val response = connection.inputStream.bufferedReader().use { it.readText() }
+                    Log.d("Petición GET", "Respuesta: $response")
+
+                    // Procesamos la respuesta (asumiendo que es un JSON)
+                    val jsonObject = JSONObject(response)
+                    Log.d("Respuesta", jsonObject.toString())
+
+                    // Supongamos que en la respuesta viene algo como:
+                    // {
+                    //   "ok": true,
+                    //   "data": {
+                    //       "quota": 123
+                    //   }
+                    // }
+                    // Ajusta según tu estructura real de JSON
+                    val data = jsonObject.optJSONObject("data")
+                    val quota = data?.optString("quota_disponible", "No disponible") ?: "No disponible"
+
+                    // Actualizar la UI (TextView) con la información obtenida
+                    requireActivity().runOnUiThread {
+                        binding.textDashboard.text =
+                            "Tu cuota disponible es: $quota"
+                    }
+                } else {
+                    Log.e("Petición GET", "Error en la petición: Código $responseCode")
+                }
+
+            } catch (e: Exception) {
+                Log.e("Petición GET", "Error en la petición GET", e)
+            }
+        }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
-    }
-
-    private fun hideKeyboard() {
-        val inputMethodManager = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        inputMethodManager.hideSoftInputFromWindow(binding.root.windowToken, 0)
-    }
-
-    private fun sendLoginData(phone: String, nickname: String, email:String) {
-        val executor = Executors.newSingleThreadExecutor()
-        executor.execute {
-            try {
-                val jsonObject = JSONObject().apply {
-                    put("nickname", nickname)
-                    put("email", email)
-                    put("telefon", phone)
-                }
-
-                val url = URL("https://imagia3.ieti.site/api/usuaris/registrar")
-                val connection = url.openConnection() as HttpURLConnection
-                connection.requestMethod = "POST"
-                connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
-                connection.doOutput = true
-
-                DataOutputStream(connection.outputStream).use { it.writeBytes(jsonObject.toString()) }
-
-                val responseCode = connection.responseCode
-                if (responseCode == HttpURLConnection.HTTP_OK) {
-                    val response = connection.inputStream.bufferedReader().use { it.readText() }
-                    Log.d("Petición", "Respuesta recibida: $response")
-                } else {
-                    Log.d("Petición", "Error en la petición: Código $responseCode")
-                }
-            } catch (e: Exception) {
-                Log.e("Petición", "Error al enviar la imagen", e)
-            }
-        }
     }
 }
