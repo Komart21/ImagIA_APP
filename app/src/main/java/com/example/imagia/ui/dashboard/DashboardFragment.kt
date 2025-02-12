@@ -1,24 +1,24 @@
 package com.example.imagia.ui.dashboard
 
 import android.content.Context
-import android.graphics.Typeface
 import android.os.Bundle
 import android.util.Log
-import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.imagia.databinding.FragmentDashboardBinding
+import com.example.imagia.databinding.HistoryItemBinding
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 class DashboardFragment : Fragment() {
 
@@ -30,47 +30,29 @@ class DashboardFragment : Fragment() {
     inner class HistoryAdapter(private var items: List<HistoryItem>) :
         RecyclerView.Adapter<HistoryAdapter.HistoryViewHolder>() {
 
-        inner class HistoryViewHolder(
-            itemView: View,
-            val textDate: TextView,
-            val textPrompt: TextView
-        ) : RecyclerView.ViewHolder(itemView)
+        inner class HistoryViewHolder(val binding: HistoryItemBinding) :
+            RecyclerView.ViewHolder(binding.root)
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): HistoryViewHolder {
-            val context = parent.context
-
-            val layout = LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(16, 16, 16, 16)
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                )
-            }
-            val textDate = TextView(context).apply {
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-                setTypeface(null, Typeface.BOLD)
-            }
-            val textPrompt = TextView(context).apply {
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-                visibility = View.GONE
-            }
-            layout.addView(textDate)
-            layout.addView(textPrompt)
-
-            return HistoryViewHolder(layout, textDate, textPrompt)
+            val binding = HistoryItemBinding.inflate(
+                LayoutInflater.from(parent.context),
+                parent,
+                false
+            )
+            return HistoryViewHolder(binding)
         }
 
         override fun onBindViewHolder(holder: HistoryViewHolder, position: Int) {
             val item = items[position]
-            holder.textDate.text = item.createdAt
-            holder.textPrompt.text = item.prompt
+            with(holder.binding) {
+                // Se muestra la fecha formateada
+                textDate.text = formatDate(item.createdAt)
+                textPrompt.text = item.prompt
 
-            holder.itemView.setOnClickListener {
-                if (holder.textPrompt.visibility == View.GONE) {
-                    holder.textPrompt.visibility = View.VISIBLE
-                } else {
-                    holder.textPrompt.visibility = View.GONE
+                // Al hacer clic sobre el item se alterna la visibilidad del prompt
+                root.setOnClickListener {
+                    textPrompt.visibility =
+                        if (textPrompt.visibility == View.GONE) View.VISIBLE else View.GONE
                 }
             }
         }
@@ -105,10 +87,15 @@ class DashboardFragment : Fragment() {
     private fun fetchHistory() {
         Thread {
             try {
-                val url = URL("https://imagia3.ieti.site/api/usuaris/historial/prompts?usuario=${requireContext().getSharedPreferences("USER_DATA", Context.MODE_PRIVATE).getString("nickname", "default")}")
+                val sharedPreferences =
+                    requireContext().getSharedPreferences("USER_DATA", Context.MODE_PRIVATE)
+                val nickname = sharedPreferences.getString("nickname", "default")
+                val apiToken = sharedPreferences.getString("apiToken", "default")
+
+                val url = URL("https://imagia3.ieti.site/api/usuaris/historial/prompts?usuario=$nickname")
                 val connection = url.openConnection() as HttpURLConnection
                 connection.requestMethod = "GET"
-                connection.setRequestProperty("Authorization", "Bearer ${requireContext().getSharedPreferences("USER_DATA", Context.MODE_PRIVATE).getString("apiToken", "default")}")
+                connection.setRequestProperty("Authorization", "Bearer $apiToken")
                 connection.connectTimeout = 15000
                 connection.readTimeout = 15000
 
@@ -146,6 +133,25 @@ class DashboardFragment : Fragment() {
                 e.printStackTrace()
             }
         }.start()
+    }
+
+    /**
+     * Función auxiliar para formatear la fecha.
+     * Se asume que la fecha de entrada viene en formato ISO 8601, por ejemplo: "yyyy-MM-dd'T'HH:mm:ss'Z'".
+     * Se formatea a "dd/MM/yyyy HH:mm".
+     */
+    private fun formatDate(dateString: String): String {
+        return try {
+            // Ajusta el formato de entrada según tu API
+            val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
+            inputFormat.timeZone = TimeZone.getTimeZone("UTC")
+            val date = inputFormat.parse(dateString)
+            val outputFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+            outputFormat.format(date)
+        } catch (e: Exception) {
+            // En caso de error, se retorna la cadena original
+            dateString
+        }
     }
 
     override fun onDestroyView() {

@@ -281,6 +281,13 @@ class HomeFragment : Fragment(), SensorEventListener {
                     }
                     Log.d("Petición", "Respuesta recibida: $description")
                 } else {
+                    if(responseCode == 402){
+                        Toast.makeText(
+                            requireContext(),
+                            "Se te ha acabado la quota!",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
                     Log.d("Petición", "Error en la petición: Código $responseCode")
                 }
             } catch (e: Exception) {
