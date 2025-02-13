@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">ImagIA</string>
+    <string name="title_compte">Compte</string>
+    <string name="title_ullada">Ullada</string>
+    <string name="title_historial">Historial</string>
+</resources>

@@ -1,0 +1,89 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+# Gradle
+.gradle/
+build/
+!gradle-wrapper.jar
+.gradle-cache/
+.gradle/*
+
+# Local configuration files
+/local.properties
+/.idea/
+/.idea/
+/*.iml
+
+# Android Studio
+*.iws
+*.iml
+*.ipr
+.idea/
+.idea/caches
+.idea/libraries
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+.idea/codeStyles/
+.idea/gradle.xml
+.idea/misc.xml
+.idea/modules/
+.idea/codestyles/
+.idea/runConfigurations/
+.idea/deploymentTargetDropDown.xml
+.idea/settings.jar
+
+# Kotlin/Java
+*.class
+*.log
+*.swp
+*.temp
+*.tmp
+*.orig
+*.bak
+
+# Built application files
+*.apk
+*.ap_
+*.aab
+
+# Proguard and Android Lint
+proguard/
+lint/reports/
+lint/results/
+
+# IntelliJ
+out/
+
+# Unit test results
+
+
+# Mac OS
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Others
+*.keystore
+.gradle
+local.properties
+.env
+
+# Dependency directories
+**/build/
+**/bin/
